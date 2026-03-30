@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FinGuard — Dashboard</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-inner">
+        <div>
+            <h1>🛡️ FinGuard</h1>
+            <p class="subtitle">Smart Expense Tracker with Fraud Detection</p>
+        </div>
+        <div class="header-user">
+            <span>👤 {{ username }}</span>
+            <a href="/fraud" class="btn-nav">🚨 Fraud History</a>
+            <a href="/profile" class="btn-nav">⚙️ Profile</a>
+            <a href="/logout" class="btn-logout">Logout</a>
+        </div>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-top">{{ message }}</div>
+    {% endfor %}
+{% endwith %}
+
+<!-- Budget Bar -->
+{% if monthly_budget %}
+<div class="budget-bar-wrap">
+    <div class="budget-bar-info">
+        <span>📅 Monthly Budget: ₹{{ "%.2f"|format(monthly_budget) }}</span>
+        <span>Spent: ₹{{ "%.2f"|format(monthly_spent) }} ({{ budget_percent }}%)</span>
+    </div>
+    <div class="budget-track">
+        <div class="budget-fill budget-{{ budget_status }}" style="width: {{ [budget_percent, 100]|min }}%"></div>
+    </div>
+    {% if budget_status == 'over' %}
+    <p class="budget-msg budget-msg-over">🚨 Over budget by ₹{{ "%.2f"|format(monthly_spent - monthly_budget) }}!</p>
+    {% elif budget_status == 'warning' %}
+    <p class="budget-msg budget-msg-warning">⚠️ {{ budget_percent }}% used — ₹{{ "%.2f"|format(monthly_budget - monthly_spent) }} remaining.</p>
+    {% else %}
+    <p class="budget-msg budget-msg-safe">✅ On track — ₹{{ "%.2f"|format(monthly_budget - monthly_spent) }} remaining.</p>
+    {% endif %}
+</div>
+{% else %}
+<div class="budget-bar-wrap budget-not-set">
+    💡 No monthly budget set. <a href="/profile">Set one in Profile →</a>
+</div>
+{% endif %}
+
+<!-- Cards -->
+<div class="cards">
+    <div class="card">
+        <div class="card-icon">💸</div>
+        <div class="card-label">Total Spent</div>
+        <div class="card-value">₹{{ "%.2f"|format(total) }}</div>
+    </div>
+    <div class="card">
+        <div class="card-icon">📅</div>
+        <div class="card-label">This Month</div>
+        <div class="card-value">₹{{ "%.2f"|format(monthly_spent) }}</div>
+    </div>
+    <div class="card card-danger">
+        <div class="card-icon">🚨</div>
+        <div class="card-label">Flagged</div>
+        <div class="card-value">{{ fraud_count }}</div>
+    </div>
+    <div class="card card-warning">
+        <div class="card-icon">⚠️</div>
+        <div class="card-label">Fraud Amount</div>
+        <div class="card-value">₹{{ "%.2f"|format(fraud_total) }}</div>
+    </div>
+</div>
+
+<!-- Form + Chart -->
+<div class="main-layout">
+    <div class="form-section">
+        <h2>Add Expense</h2>
+        <form action="/add" method="POST">
+            <input type="number" name="amount" placeholder="Amount (₹)" required min="1" step="0.01">
+            <select name="category" required>
+                <option value="">Select Category</option>
+                <option value="Food">🍔 Food</option>
+                <option value="Travel">✈️ Travel</option>
+                <option value="Bills">🧾 Bills</option>
+                <option value="Shopping">🛍️ Shopping</option>
+                <option value="Entertainment">🎬 Entertainment</option>
+                <option value="Others">📦 Others</option>
+            </select>
+            <input type="text" name="description" placeholder="Description (optional)">
+            <button type="submit">+ Add Expense</button>
+        </form>
+    </div>
+
+    <div class="chart-section">
+        <h2>Spending by Category</h2>
+        {% if category_data %}
+        <canvas id="pieChart" width="300" height="300"></canvas>
+        {% else %}
+        <p class="no-data">No data yet. Add your first expense!</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Transactions Table -->
+<div class="table-section">
+    <div class="table-header">
+        <h2>All Transactions</h2>
+        <a href="/export" class="btn-export">⬇️ Export CSV</a>
+    </div>
+    {% if transactions %}
+    <table>
+        <tr>
+            <th>ID</th><th>Amount</th><th>Category</th>
+            <th>Description</th><th>Date</th><th>Status</th><th>Actions</th>
+        </tr>
+        {% for t in transactions %}
+        <tr class="{{ 'fraud-row' if t[6] else '' }}">
+            <td>{{ t[0] }}</td>
+            <td>₹{{ "%.2f"|format(t[2]) }}</td>
+            <td>{{ t[3] }}</td>
+            <td>{{ t[4] or '—' }}</td>
+            <td>{{ t[5] }}</td>
+            <td>
+                {% if t[6] %}
+                    <span class="badge-fraud" title="{{ t[7] }}">🚨 Fraud</span>
+                {% else %}
+                    <span class="badge-safe">✅ Safe</span>
+                {% endif %}
+            </td>
+            <td>
+                <div class="action-btns">
+                    <a href="/edit/{{ t[0] }}" class="btn-edit">Edit</a>
+                    <form action="/delete/{{ t[0] }}" method="POST" onsubmit="return confirm('Delete?')">
+                        <button type="submit" class="btn-delete">Delete</button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+        {% if t[6] and t[7] %}
+        <tr class="fraud-reason-row">
+            <td colspan="7">⚠️ <strong>Reason:</strong> {{ t[7] }}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+    </table>
+    {% else %}
+    <p class="no-data">No transactions yet.</p>
+    {% endif %}
+</div>
+
+{% if category_data %}
+<script>
+    const labels = [{% for c in category_data %}"{{ c[0] }}",{% endfor %}];
+    const values = [{% for c in category_data %}{{ c[1] }},{% endfor %}];
+    const colors = ['#4CAF50','#2196F3','#FF9800','#E91E63','#9C27B0','#00BCD4'];
+    new Chart(document.getElementById('pieChart'), {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
+        options: { responsive: false, plugins: { legend: { position: 'bottom' } } }
+    });
+</script>
+{% endif %}
+</body>
+</html>

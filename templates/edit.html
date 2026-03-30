@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FinGuard — Edit Transaction</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="header">
+    <div class="header-inner">
+        <div>
+            <h1>🛡️ FinGuard</h1>
+            <p class="subtitle">Edit Transaction</p>
+        </div>
+        <div class="header-user">
+            <a href="/" class="btn-logout">← Back to Dashboard</a>
+        </div>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-top">{{ message }}</div>
+    {% endfor %}
+{% endwith %}
+
+<div class="edit-wrapper">
+    <div class="form-section edit-card">
+        <h2>Edit Transaction #{{ t[0] }}</h2>
+
+        <form action="/edit/{{ t[0] }}" method="POST">
+            <label class="field-label">Amount (₹)</label>
+            <input type="number" name="amount" value="{{ t[2] }}" required min="1" step="0.01">
+
+            <label class="field-label">Category</label>
+            <select name="category" required>
+                <option value="">Select Category</option>
+                <option value="Food"          {{ 'selected' if t[3] == 'Food' }}>🍔 Food</option>
+                <option value="Travel"        {{ 'selected' if t[3] == 'Travel' }}>✈️ Travel</option>
+                <option value="Bills"         {{ 'selected' if t[3] == 'Bills' }}>🧾 Bills</option>
+                <option value="Shopping"      {{ 'selected' if t[3] == 'Shopping' }}>🛍️ Shopping</option>
+                <option value="Entertainment" {{ 'selected' if t[3] == 'Entertainment' }}>🎬 Entertainment</option>
+                <option value="Others"        {{ 'selected' if t[3] == 'Others' }}>📦 Others</option>
+            </select>
+
+            <label class="field-label">Description</label>
+            <input type="text" name="description" value="{{ t[4] or '' }}" placeholder="Description (optional)">
+
+            <div class="edit-actions">
+                <a href="/" class="btn-cancel">Cancel</a>
+                <button type="submit">Save Changes</button>
+            </div>
+        </form>
+
+        {% if t[6] %}
+        <div class="edit-fraud-notice">
+            ⚠️ This transaction is currently flagged as fraud.<br>
+            <small>{{ t[7] }}</small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+</body>
+</html>

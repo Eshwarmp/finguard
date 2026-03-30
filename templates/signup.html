@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FinGuard — Sign Up</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="auth-page">
+
+<div class="bg-blob blob1"></div>
+<div class="bg-blob blob2"></div>
+<div class="bg-blob blob3"></div>
+
+<div class="auth-card">
+    <div class="auth-logo">🛡️ FinGuard</div>
+    <h2 class="auth-title">Create account</h2>
+    <p class="auth-sub">Start tracking your expenses</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endwith %}
+
+    <form action="/signup" method="POST">
+        <div class="input-group">
+            <span class="input-icon">👤</span>
+            <input type="text" name="username" placeholder="Username" required autofocus>
+        </div>
+        <div class="input-group">
+            <span class="input-icon">✉️</span>
+            <input type="email" name="email" placeholder="Email" required>
+        </div>
+        <div class="input-group">
+            <span class="input-icon">🔒</span>
+            <input type="password" name="password" id="signup-password" placeholder="Password (min 6 chars)" required>
+            <span class="eye-icon" onclick="togglePassword('signup-password', this)">👁️</span>
+        </div>
+        <button type="submit">Create Account →</button>
+    </form>
+
+    <p class="auth-switch">Already have an account? <a href="/login">Login</a></p>
+</div>
+
+<script>
+function togglePassword(inputId, eyeEl) {
+    const input = document.getElementById(inputId);
+    if (input.type === 'password') {
+        input.type = 'text';
+        eyeEl.style.opacity = '1';
+    } else {
+        input.type = 'password';
+        eyeEl.style.opacity = '0.4';
+    }
+}
+</script>
+</body>
+</html>

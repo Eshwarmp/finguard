@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FinGuard — Profile</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="header">
+    <div class="header-inner">
+        <div>
+            <h1>🛡️ FinGuard</h1>
+            <p class="subtitle">My Profile</p>
+        </div>
+        <div class="header-user">
+            <span>👤 {{ username }}</span>
+            <a href="/fraud" class="btn-nav">🚨 Fraud History</a>
+            <a href="/" class="btn-nav">← Dashboard</a>
+            <a href="/logout" class="btn-logout">Logout</a>
+        </div>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-top">{{ message }}</div>
+    {% endfor %}
+{% endwith %}
+
+<div class="page-body">
+
+    <!-- Stats row -->
+    <div class="cards" style="margin-bottom: 0;">
+        <div class="card">
+            <div class="card-icon">📊</div>
+            <div class="card-label">Total Transactions</div>
+            <div class="card-value">{{ total_transactions }}</div>
+        </div>
+        <div class="card">
+            <div class="card-icon">💸</div>
+            <div class="card-label">Total Spent</div>
+            <div class="card-value">₹{{ "%.2f"|format(total_spent) }}</div>
+        </div>
+        <div class="card card-danger">
+            <div class="card-icon">🚨</div>
+            <div class="card-label">Fraud Flagged</div>
+            <div class="card-value">{{ total_fraud }}</div>
+        </div>
+        <div class="card">
+            <div class="card-icon">📅</div>
+            <div class="card-label">Member Since</div>
+            <div class="card-value" style="font-size:1rem;">{{ user[3].strftime('%b %Y') }}</div>
+        </div>
+    </div>
+
+    <div class="profile-grid">
+
+        <!-- Update Info -->
+        <div class="form-section">
+            <h2>Account Info</h2>
+            <form action="/profile" method="POST">
+                <input type="hidden" name="action" value="update_info">
+                <label class="field-label">Username</label>
+                <input type="text" name="username" value="{{ user[0] }}" required>
+                <label class="field-label">Email</label>
+                <input type="email" name="email" value="{{ user[1] }}" required>
+                <button type="submit">Update Info</button>
+            </form>
+        </div>
+
+        <!-- Change Password -->
+        <div class="form-section">
+            <h2>Change Password</h2>
+            <form action="/profile" method="POST">
+                <input type="hidden" name="action" value="change_password">
+                <label class="field-label">Current Password</label>
+                <div class="input-group">
+                    <input type="password" name="current_password" id="cur-pass" placeholder="Current password" required>
+                    <span class="eye-icon" onclick="togglePassword('cur-pass',this)">👁️</span>
+                </div>
+                <label class="field-label">New Password</label>
+                <div class="input-group">
+                    <input type="password" name="new_password" id="new-pass" placeholder="Min 6 characters" required>
+                    <span class="eye-icon" onclick="togglePassword('new-pass',this)">👁️</span>
+                </div>
+                <button type="submit">Change Password</button>
+            </form>
+        </div>
+
+        <!-- Monthly Budget -->
+        <div class="form-section">
+            <h2>Monthly Budget</h2>
+            <p style="color:#718096; font-size:0.9rem; margin-bottom:16px;">
+                Set a monthly spending limit. A progress bar will appear on the dashboard showing how close you are.
+            </p>
+            <form action="/profile" method="POST">
+                <input type="hidden" name="action" value="set_budget">
+                <label class="field-label">Budget Amount (₹)</label>
+                <input type="number" name="monthly_budget"
+                    value="{{ user[2] if user[2] else '' }}"
+                    placeholder="e.g. 15000" min="1" step="0.01">
+                <button type="submit">Set Budget</button>
+            </form>
+            {% if user[2] %}
+            <div style="margin-top:12px; padding:10px 14px; background:#e6f4ea; border-radius:8px; font-size:0.88rem; color:#276749;">
+                ✅ Current budget: <strong>₹{{ "%.2f"|format(user[2]) }}</strong> / month
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+
+<script>
+function togglePassword(id, el) {
+    const input = document.getElementById(id);
+    input.type = input.type === 'password' ? 'text' : 'password';
+    el.style.opacity = input.type === 'text' ? '1' : '0.4';
+}
+</script>
+</body>
+</html>

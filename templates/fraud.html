@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FinGuard — Fraud History</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="header">
+    <div class="header-inner">
+        <div>
+            <h1>🛡️ FinGuard</h1>
+            <p class="subtitle">Fraud History</p>
+        </div>
+        <div class="header-user">
+            <span>👤 {{ username }}</span>
+            <a href="/" class="btn-logout">← Dashboard</a>
+            <a href="/logout" class="btn-logout">Logout</a>
+        </div>
+    </div>
+</div>
+
+<div class="page-body">
+
+    <!-- Summary card -->
+    <div class="fraud-summary">
+        <div class="fraud-summary-icon">🚨</div>
+        <div>
+            <div class="fraud-summary-count">{{ flagged|length }} flagged transaction{{ 's' if flagged|length != 1 }}</div>
+            <div class="fraud-summary-total">Total suspicious amount: <strong>₹{{ "%.2f"|format(fraud_total) }}</strong></div>
+        </div>
+    </div>
+
+    {% if flagged %}
+    <div class="table-section" style="padding: 0;">
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Amount</th>
+                <th>Category</th>
+                <th>Description</th>
+                <th>Date</th>
+                <th>Fraud Reason</th>
+            </tr>
+            {% for t in flagged %}
+            <tr class="fraud-row">
+                <td>{{ t[0] }}</td>
+                <td>₹{{ "%.2f"|format(t[2]) }}</td>
+                <td>{{ t[3] }}</td>
+                <td>{{ t[4] or '—' }}</td>
+                <td>{{ t[5] }}</td>
+                <td class="reason-cell">{{ t[7] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">✅</div>
+        <h3>No fraudulent transactions!</h3>
+        <p>All your transactions look clean. Great job!</p>
+        <a href="/" class="btn-export">← Go to Dashboard</a>
+    </div>
+    {% endif %}
+
+</div>
+</body>
+</html>
