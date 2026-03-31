@@ -4,10 +4,11 @@ import os
 import bcrypt
 import csv
 import io
+import secrets
 from collections import defaultdict
 from functools import wraps
 from flask_mail import Mail, Message
-from datetime import datetime
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "finguard_secret_2024")
@@ -23,11 +24,8 @@ mail = Mail(app)
 
 def get_db():
     return mysql.connector.connect(
-        host=os.environ.get("DB_HOST", "localhost"),
-        user=os.environ.get("DB_USER", "root"),
-        password=os.environ.get("DB_PASSWORD", ""),
-        database=os.environ.get("DB_NAME", "railway"),
-        port=int(os.environ.get("DB_PORT", 3306))
+        host="localhost", user="root",
+        password=DB_PASSWORD, database="expense_tracker"
     )
 
 def login_required(f):
@@ -405,6 +403,99 @@ def profile():
         total_transactions=total_transactions,
         total_spent=round(total_spent,2),
         total_fraud=total_fraud)
+
+# ── Forgot Password ──────────────────────────────────────────
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form['email'].strip()
+        db = get_db(); cursor = db.cursor()
+        cursor.execute("SELECT id, username FROM users WHERE email = %s", (email,))
+        user = cursor.fetchone()
+
+        if user:
+            # Generate a secure token valid for 1 hour
+            token = secrets.token_urlsafe(32)
+            expiry = datetime.now() + timedelta(hours=1)
+            cursor.execute(
+                "UPDATE users SET reset_token=%s, reset_expiry=%s WHERE id=%s",
+                (token, expiry, user[0])
+            )
+            db.commit()
+
+            # Send reset email
+            reset_url = url_for('reset_password', token=token, _external=True)
+            try:
+                msg = Message(
+                    subject="FinGuard — Password Reset Request",
+                    recipients=[email]
+                )
+                msg.html = f"""
+                <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;">
+                    <div style="background:#1a1a2e;color:white;padding:24px;text-align:center;">
+                        <h1 style="margin:0;">FinGuard</h1>
+                        <p style="color:#a0aec0;margin:4px 0 0;">Password Reset</p>
+                    </div>
+                    <div style="padding:28px;">
+                        <p>Hi <strong>{user[1]}</strong>,</p>
+                        <p style="color:#555;">You requested a password reset. Click the button below to set a new password:</p>
+                        <div style="text-align:center;margin:28px 0;">
+                            <a href="{reset_url}" style="background:#0f3460;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Reset Password</a>
+                        </div>
+                        <p style="color:#a0aec0;font-size:0.85rem;">This link expires in 1 hour. If you didn't request this, ignore this email.</p>
+                        <p>— FinGuard Team</p>
+                    </div>
+                </div>"""
+                mail.send(msg)
+            except Exception as e:
+                print(f"Reset email failed: {e}")
+
+        cursor.close(); db.close()
+        # Always show success (don't reveal if email exists)
+        flash("If that email is registered, a reset link has been sent.", "success")
+        return redirect(url_for('login'))
+
+    return render_template('forgot.html')
+
+# ── Reset Password ────────────────────────────────────────────
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    db = get_db(); cursor = db.cursor()
+    cursor.execute(
+        "SELECT id FROM users WHERE reset_token=%s AND reset_expiry > %s",
+        (token, datetime.now())
+    )
+    user = cursor.fetchone()
+
+    if not user:
+        cursor.close(); db.close()
+        flash("Reset link is invalid or has expired.", "error")
+        return redirect(url_for('forgot_password'))
+
+    if request.method == 'POST':
+        password         = request.form['password']
+        confirm_password = request.form['confirm_password']
+
+        if len(password) < 6:
+            flash("Password must be at least 6 characters.", "error")
+            return render_template('reset.html', token=token)
+
+        if password != confirm_password:
+            flash("Passwords do not match.", "error")
+            return render_template('reset.html', token=token)
+
+        new_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        cursor.execute(
+            "UPDATE users SET password_hash=%s, reset_token=NULL, reset_expiry=NULL WHERE id=%s",
+            (new_hash, user[0])
+        )
+        db.commit()
+        cursor.close(); db.close()
+        flash("Password reset successful! Please login.", "success")
+        return redirect(url_for('login'))
+
+    cursor.close(); db.close()
+    return render_template('reset.html', token=token)
 
 if __name__ == '__main__':
     app.run(debug=True)
