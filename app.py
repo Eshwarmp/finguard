@@ -24,8 +24,11 @@ mail = Mail(app)
 
 def get_db():
     return mysql.connector.connect(
-        host="localhost", user="root",
-        password=DB_PASSWORD, database="expense_tracker"
+        host=os.environ.get("DB_HOST", "localhost"),
+        user=os.environ.get("DB_USER", "root"),
+        password=os.environ.get("DB_PASSWORD", ""),
+        database=os.environ.get("DB_NAME", "railway"),
+        port=int(os.environ.get("DB_PORT", 3306))
     )
 
 def login_required(f):
