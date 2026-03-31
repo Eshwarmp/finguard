@@ -15,6 +15,7 @@
         </div>
         <div class="header-user">
             <span>👤 {{ username }}</span>
+            <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark</button>
             <a href="/" class="btn-logout">← Dashboard</a>
             <a href="/logout" class="btn-logout">Logout</a>
         </div>
@@ -65,5 +66,23 @@
     {% endif %}
 
 </div>
+</body>
+</html>
+<script>
+function applyTheme(dark) {
+    document.body.classList.toggle("dark", dark);
+    const btn = document.getElementById("themeBtn");
+    if (btn) btn.textContent = dark ? "☀️ Light" : "🌙 Dark";
+}
+function toggleTheme() {
+    const isDark = !document.body.classList.contains("dark");
+    localStorage.setItem("finguard_theme", isDark ? "dark" : "light");
+    applyTheme(isDark);
+}
+(function() {
+    const saved = localStorage.getItem("finguard_theme");
+    if (saved === "dark") applyTheme(true);
+})();
+</script>
 </body>
 </html>
