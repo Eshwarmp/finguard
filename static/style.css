@@ -740,12 +740,118 @@ tr:hover td { background: #f8fafc; }
 
 .empty-icon { font-size: 3rem; margin-bottom: 16px; }
 
-/* Budget not set nudge */
-.budget-not-set {
-    text-align: center;
-    font-size: 0.9rem;
-    color: #718096;
-    padding: 12px 24px;
+/* ══════════════════════════════════════════════════════════
+   DARK MODE
+   All dark styles scoped to body.dark
+   Toggle button saves preference to localStorage
+══════════════════════════════════════════════════════════ */
+
+/* ── Dark mode toggle button ────────────────────────────── */
+.theme-toggle {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 20px;
+    padding: 6px 12px;
+    color: white;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
-.budget-not-set a { color: #0f3460; font-weight: 600; text-decoration: none; }
-.budget-not-set a:hover { text-decoration: underline; }
+.theme-toggle:hover { background: rgba(255,255,255,0.2); }
+
+/* ── Dark body base ─────────────────────────────────────── */
+body.dark {
+    background-color: #0f1117;
+    color: #e2e8f0;
+}
+
+/* ── Dark header (keep same — already dark) ─────────────── */
+body.dark .header {
+    background: linear-gradient(135deg, #080c18 0%, #0d1526 60%, #091d3a 100%);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+/* ── Dark cards ─────────────────────────────────────────── */
+body.dark .card,
+body.dark .form-section,
+body.dark .chart-section,
+body.dark .budget-bar-wrap,
+body.dark .edit-card,
+body.dark .empty-state,
+body.dark .fraud-summary {
+    background: #1a1f2e;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+    color: #e2e8f0;
+}
+
+body.dark .card-label { color: #94a3b8; }
+body.dark .card-value { color: #f1f5f9; }
+
+/* ── Dark form inputs ───────────────────────────────────── */
+body.dark input,
+body.dark select {
+    background: #252b3b;
+    border-color: #374151;
+    color: #e2e8f0;
+}
+body.dark input::placeholder { color: #6b7280; }
+body.dark input:focus,
+body.dark select:focus {
+    background: #2d3448;
+    border-color: #6366f1;
+}
+body.dark select option { background: #1a1f2e; color: #e2e8f0; }
+
+/* ── Dark table ─────────────────────────────────────────── */
+body.dark table { background: #1a1f2e; }
+body.dark th { background: #0f1117; color: #e2e8f0; }
+body.dark td { border-bottom-color: #252b3b; color: #cbd5e1; }
+body.dark tr:hover td { background: #252b3b; }
+body.dark .fraud-row td { background: #2a1a1a; }
+body.dark .fraud-row:hover td { background: #331f1f; }
+body.dark .fraud-reason-row td {
+    background: #2a1a1a;
+    border-bottom-color: #4a2020;
+}
+
+/* ── Dark budget bar ────────────────────────────────────── */
+body.dark .budget-track { background: #252b3b; }
+body.dark .budget-bar-info { color: #94a3b8; }
+body.dark .budget-not-set { color: #94a3b8; }
+
+/* ── Dark alerts ────────────────────────────────────────── */
+body.dark .alert-success { background: #14532d; color: #86efac; }
+body.dark .alert-error   { background: #4c1d1d; color: #fca5a5; }
+body.dark .alert-warning { background: #451a03; color: #fed7aa; }
+
+/* ── Dark edit fraud notice ─────────────────────────────── */
+body.dark .edit-fraud-notice {
+    background: #2a1a1a;
+    border-left-color: #f87171;
+    color: #fca5a5;
+}
+
+/* ── Dark profile page ──────────────────────────────────── */
+body.dark .page-body { color: #e2e8f0; }
+body.dark .field-label { color: #94a3b8; }
+body.dark .fraud-summary-count { color: #f1f5f9; }
+body.dark .fraud-summary-total { color: #94a3b8; }
+body.dark .reason-cell { color: #fca5a5; }
+
+/* ── Dark h2 headings ───────────────────────────────────── */
+body.dark h2 { color: #f1f5f9; }
+body.dark .subtitle { color: #94a3b8; }
+
+/* ── Dark no-data ───────────────────────────────────────── */
+body.dark .no-data { color: #6b7280; }
+
+/* smooth transition on toggle */
+body, body * {
+    transition: background-color 0.25s ease, color 0.15s ease, border-color 0.2s ease;
+}
+/* but don't animate transforms/layout props */
+body.dark .budget-fill { transition: width 0.5s ease; }
