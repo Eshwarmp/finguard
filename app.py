@@ -13,7 +13,7 @@ from sendgrid.helpers.mail import Mail as SGMail
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "finguard_secret_2024")
-DB_PASSWORD = os.environ.get("DB_PASSWORD", "Eshwar02@sql")
+
 SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
 MAIL_USER = os.environ.get("MAIL_USER", "")
 
@@ -79,7 +79,12 @@ def send_email(to_email, subject, html_content):
         if not SENDGRID_API_KEY:
             print("SendGrid API key not set")
             return False
-        message = SGMail(from_email=MAIL_USER, to_emails=to_email, subject=subject, html_content=html_content)
+        message = SGMail(
+            from_email=MAIL_USER,
+            to_emails=to_email,
+            subject=subject,
+            html_content=html_content
+        )
         sg = SendGridAPIClient(SENDGRID_API_KEY)
         sg.send(message)
         return True
@@ -88,39 +93,75 @@ def send_email(to_email, subject, html_content):
         return False
 
 def send_fraud_email(user_email, username, amount, category, description, fraud_reason):
-    html = f\"\"\"
-    <div style=\"font-family:Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;\">
-        <div style=\"background:#1a1a2e;color:white;padding:24px;text-align:center;\">
-            <h1 style=\"margin:0;\">FinGuard</h1><p style=\"color:#a0aec0;margin:4px 0 0;\">Fraud Detection Alert</p>
-        </div>
-        <div style=\"padding:28px;\">
-            <p>Hi <strong>{username}</strong>,</p>
-            <p>A suspicious transaction was detected: <strong>Rs.{amount:.2f}</strong> in {category}.</p>
-            <p style=\"color:#c53030;\">Reason: {fraud_reason}</p>
-            <p>If you made this transaction, ignore this alert. Otherwise review your account immediately.</p>
-            <p>- FinGuard Team</p>
-        </div>
-    </div>\"\"\"
+    html = (
+        '<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;">'
+        '<div style="background:#1a1a2e;color:white;padding:24px;text-align:center;">'
+        '<h1 style="margin:0;">FinGuard</h1>'
+        '<p style="color:#a0aec0;margin:4px 0 0;">Fraud Detection Alert</p>'
+        '</div>'
+        '<div style="padding:28px;">'
+        f'<p>Hi <strong>{username}</strong>,</p>'
+        '<p style="color:#555;">A suspicious transaction was detected:</p>'
+        '<div style="background:#fff5f5;border-left:4px solid #e53e3e;border-radius:6px;padding:16px;margin:20px 0;">'
+        f'<p><strong>Amount:</strong> Rs.{amount:.2f}</p>'
+        f'<p><strong>Category:</strong> {category}</p>'
+        f'<p><strong>Description:</strong> {description or "-"}</p>'
+        f'<p style="color:#c53030;"><strong>Reason:</strong> {fraud_reason}</p>'
+        '</div>'
+        '<p>If you made this transaction, ignore this alert. Otherwise review your account immediately.</p>'
+        '<p>- FinGuard Team</p>'
+        '</div></div>'
+    )
     return send_email(user_email, "Fraud Alert - Suspicious Transaction on FinGuard", html)
 
 def send_welcome_email(user_email, username):
-    html = f\"\"\"
-    <div style=\"font-family:Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;\">
-        <div style=\"background:#1a1a2e;color:white;padding:24px;text-align:center;\">
-            <h1 style=\"margin:0;\">FinGuard</h1><p style=\"color:#a0aec0;margin:4px 0 0;\">Welcome aboard!</p>
-        </div>
-        <div style=\"padding:28px;\">
-            <p>Hi <strong>{username}</strong>, welcome to FinGuard!</p>
-            <p>You can now track expenses, detect fraud, set budgets and export your data.</p>
-            <p>- FinGuard Team</p>
-        </div>
-    </div>\"\"\"
+    html = (
+        '<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;">'
+        '<div style="background:#1a1a2e;color:white;padding:24px;text-align:center;">'
+        '<h1 style="margin:0;">FinGuard</h1>'
+        '<p style="color:#a0aec0;margin:4px 0 0;">Welcome aboard!</p>'
+        '</div>'
+        '<div style="padding:28px;">'
+        f'<p>Hi <strong>{username}</strong>, welcome to FinGuard!</p>'
+        '<p style="color:#555;">You can now:</p>'
+        '<ul style="color:#555;line-height:2;">'
+        '<li>Track your daily expenses by category</li>'
+        '<li>Get instant fraud alerts on suspicious transactions</li>'
+        '<li>Set monthly budgets and track your spending</li>'
+        '<li>Export your transactions as CSV anytime</li>'
+        '</ul>'
+        '<div style="text-align:center;margin:28px 0;">'
+        '<a href="https://finguards.up.railway.app" style="background:#0f3460;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Go to Dashboard</a>'
+        '</div>'
+        '<p>- FinGuard Team</p>'
+        '</div></div>'
+    )
     return send_email(user_email, "Welcome to FinGuard!", html)
+
+def send_reset_email(user_email, username, reset_url):
+    html = (
+        '<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;">'
+        '<div style="background:#1a1a2e;color:white;padding:24px;text-align:center;">'
+        '<h1 style="margin:0;">FinGuard</h1>'
+        '<p style="color:#a0aec0;margin:4px 0 0;">Password Reset</p>'
+        '</div>'
+        '<div style="padding:28px;">'
+        f'<p>Hi <strong>{username}</strong>,</p>'
+        '<p style="color:#555;">You requested a password reset. Click below to set a new password:</p>'
+        '<div style="text-align:center;margin:28px 0;">'
+        f'<a href="{reset_url}" style="background:#0f3460;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Reset Password</a>'
+        '</div>'
+        '<p style="color:#a0aec0;font-size:0.85rem;">This link expires in 1 hour. If you did not request this, ignore this email.</p>'
+        '<p>- FinGuard Team</p>'
+        '</div></div>'
+    )
+    return send_email(user_email, "FinGuard - Password Reset Request", html)
 
 # ── Signup ───────────────────────────────────────────────────
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
-    if 'user_id' in session: return redirect(url_for('home'))
+    if 'user_id' in session:
+        return redirect(url_for('home'))
     if request.method == 'POST':
         username = request.form['username'].strip()
         email    = request.form['email'].strip()
@@ -149,7 +190,8 @@ def signup():
 # ── Login ────────────────────────────────────────────────────
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if 'user_id' in session: return redirect(url_for('home'))
+    if 'user_id' in session:
+        return redirect(url_for('home'))
     if request.method == 'POST':
         username = request.form['username'].strip()
         password = request.form['password']
@@ -179,47 +221,33 @@ def home():
     db = get_db(); cursor = db.cursor()
     uid = session['user_id']
     now = datetime.now()
-
     cursor.execute("SELECT * FROM transactions WHERE user_id = %s ORDER BY date DESC", (uid,))
     data = cursor.fetchall()
-
     cursor.execute("SELECT SUM(amount) FROM transactions WHERE user_id = %s", (uid,))
     total = cursor.fetchone()[0] or 0
-
     cursor.execute("SELECT SUM(amount) FROM transactions WHERE user_id = %s AND is_fraud = TRUE", (uid,))
     fraud_total = cursor.fetchone()[0] or 0
-
     cursor.execute("SELECT COUNT(*) FROM transactions WHERE user_id = %s AND is_fraud = TRUE", (uid,))
     fraud_count = cursor.fetchone()[0] or 0
-
     cursor.execute("SELECT category, SUM(amount) FROM transactions WHERE user_id = %s GROUP BY category", (uid,))
     category_data = cursor.fetchall()
-
-    cursor.execute(
-        "SELECT SUM(amount) FROM transactions WHERE user_id=%s AND MONTH(date)=%s AND YEAR(date)=%s",
-        (uid, now.month, now.year)
-    )
+    cursor.execute("SELECT SUM(amount) FROM transactions WHERE user_id=%s AND MONTH(date)=%s AND YEAR(date)=%s", (uid, now.month, now.year))
     monthly_spent = cursor.fetchone()[0] or 0
-
     cursor.execute("SELECT monthly_budget FROM users WHERE id = %s", (uid,))
     budget_row = cursor.fetchone()
     monthly_budget = budget_row[0] if budget_row and budget_row[0] else None
-
     cursor.close(); db.close()
-
     budget_percent = None
     budget_status  = None
     if monthly_budget and monthly_budget > 0:
         budget_percent = round((monthly_spent / monthly_budget) * 100, 1)
         budget_status  = "over" if budget_percent >= 100 else ("warning" if budget_percent >= 80 else "safe")
-
     return render_template('index.html',
         transactions=data, total=round(total,2),
         fraud_total=round(fraud_total,2), fraud_count=fraud_count,
         category_data=category_data, username=session['username'],
         monthly_spent=round(monthly_spent,2), monthly_budget=monthly_budget,
-        budget_percent=budget_percent, budget_status=budget_status
-    )
+        budget_percent=budget_percent, budget_status=budget_status)
 
 # ── Add Expense ──────────────────────────────────────────────
 @app.route('/add', methods=['POST'])
@@ -231,21 +259,19 @@ def add():
     uid         = session['user_id']
     try:
         amount = float(amount)
-        if amount <= 0: return redirect(url_for('home'))
+        if amount <= 0:
+            return redirect(url_for('home'))
     except ValueError:
         return redirect(url_for('home'))
-
     db = get_db(); cursor = db.cursor()
     cursor.execute("SELECT * FROM transactions WHERE user_id = %s", (uid,))
     existing = cursor.fetchall()
     is_fraud, fraud_reason = detect_fraud(amount, category, existing)
-
     cursor.execute(
         "INSERT INTO transactions (user_id, amount, category, description, is_fraud, fraud_reason) VALUES (%s,%s,%s,%s,%s,%s)",
         (uid, amount, category, description, is_fraud, fraud_reason)
     )
     db.commit()
-
     if is_fraud:
         cursor.execute("SELECT email FROM users WHERE id = %s", (uid,))
         user_email = cursor.fetchone()[0]
@@ -253,8 +279,7 @@ def add():
         if sent:
             flash(f"Fraud alert! Flagged transaction. Email sent to {user_email}.", "warning")
         else:
-            flash("Fraud alert! Suspicious transaction flagged. (Email not configured)", "warning")
-
+            flash("Fraud alert! Suspicious transaction flagged.", "warning")
     cursor.close(); db.close()
     return redirect(url_for('home'))
 
@@ -302,7 +327,7 @@ def delete(tid):
     db.commit(); cursor.close(); db.close()
     return redirect(url_for('home'))
 
-# ── Export CSV (Excel-compatible) ────────────────────────────
+# ── Export CSV ───────────────────────────────────────────────
 @app.route('/export')
 @login_required
 def export_csv():
@@ -310,26 +335,14 @@ def export_csv():
     cursor.execute("SELECT * FROM transactions WHERE user_id=%s ORDER BY date DESC", (session['user_id'],))
     transactions = cursor.fetchall()
     cursor.close(); db.close()
-
     output = io.StringIO()
-    # ✅ Excel-compatible: use excel dialect, QUOTE_ALL to prevent cell merge issues
     writer = csv.writer(output, dialect='excel', quoting=csv.QUOTE_ALL)
     writer.writerow(['ID', 'Amount (Rs.)', 'Category', 'Description', 'Date', 'Fraud Flag', 'Fraud Reason'])
     for t in transactions:
-        writer.writerow([
-            t[0],
-            f"{float(t[2]):.2f}",
-            t[3],
-            t[4] if t[4] else '',
-            str(t[5]),
-            'Yes' if t[6] else 'No',
-            t[7] if t[7] else ''
-        ])
+        writer.writerow([t[0], f"{float(t[2]):.2f}", t[3], t[4] or '', str(t[5]), 'Yes' if t[6] else 'No', t[7] or ''])
     output.seek(0)
-    # ✅ Add BOM for Excel to correctly detect UTF-8 (fixes Rs. symbol)
-    bom = '\ufeff'
     return Response(
-        bom + output.getvalue(),
+        '\ufeff' + output.getvalue(),
         mimetype='text/csv; charset=utf-8',
         headers={"Content-Disposition": f"attachment; filename=finguard_{session['username']}.csv"}
     )
@@ -345,8 +358,7 @@ def fraud_history():
     cursor.execute("SELECT SUM(amount) FROM transactions WHERE user_id=%s AND is_fraud=TRUE", (uid,))
     fraud_total = cursor.fetchone()[0] or 0
     cursor.close(); db.close()
-    return render_template('fraud.html', flagged=flagged,
-        fraud_total=round(fraud_total,2), username=session['username'])
+    return render_template('fraud.html', flagged=flagged, fraud_total=round(fraud_total,2), username=session['username'])
 
 # ── Profile ──────────────────────────────────────────────────
 @app.route('/profile', methods=['GET', 'POST'])
@@ -354,10 +366,8 @@ def fraud_history():
 def profile():
     db = get_db(); cursor = db.cursor()
     uid = session['user_id']
-
     if request.method == 'POST':
         action = request.form.get('action')
-
         if action == 'update_info':
             username = request.form['username'].strip()
             email    = request.form['email'].strip()
@@ -371,7 +381,6 @@ def profile():
                     flash("Profile updated successfully.", "success")
                 except mysql.connector.IntegrityError:
                     flash("Username or email already taken.", "error")
-
         elif action == 'change_password':
             current  = request.form['current_password']
             new_pass = request.form['new_password']
@@ -386,21 +395,19 @@ def profile():
                 cursor.execute("UPDATE users SET password_hash=%s WHERE id=%s", (new_hash, uid))
                 db.commit()
                 flash("Password changed successfully.", "success")
-
         elif action == 'set_budget':
             budget = request.form['monthly_budget']
             try:
                 budget = float(budget)
-                if budget <= 0: raise ValueError
+                if budget <= 0:
+                    raise ValueError
                 cursor.execute("UPDATE users SET monthly_budget=%s WHERE id=%s", (budget, uid))
                 db.commit()
                 flash(f"Monthly budget set to Rs.{budget:.2f}", "success")
             except ValueError:
                 flash("Enter a valid budget amount.", "error")
-
         cursor.close(); db.close()
         return redirect(url_for('profile'))
-
     cursor.execute("SELECT username, email, monthly_budget, created_at FROM users WHERE id=%s", (uid,))
     user = cursor.fetchone()
     cursor.execute("SELECT COUNT(*) FROM transactions WHERE user_id=%s", (uid,))
@@ -410,12 +417,8 @@ def profile():
     cursor.execute("SELECT COUNT(*) FROM transactions WHERE user_id=%s AND is_fraud=TRUE", (uid,))
     total_fraud = cursor.fetchone()[0]
     cursor.close(); db.close()
-
-    return render_template('profile.html',
-        user=user, username=session['username'],
-        total_transactions=total_transactions,
-        total_spent=round(total_spent,2),
-        total_fraud=total_fraud)
+    return render_template('profile.html', user=user, username=session['username'],
+        total_transactions=total_transactions, total_spent=round(total_spent,2), total_fraud=total_fraud)
 
 # ── Forgot Password ──────────────────────────────────────────
 @app.route('/forgot-password', methods=['GET', 'POST'])
@@ -425,81 +428,43 @@ def forgot_password():
         db = get_db(); cursor = db.cursor()
         cursor.execute("SELECT id, username FROM users WHERE email = %s", (email,))
         user = cursor.fetchone()
-
         if user:
-            # Generate a secure token valid for 1 hour
-            token = secrets.token_urlsafe(32)
+            token  = secrets.token_urlsafe(32)
             expiry = datetime.now() + timedelta(hours=1)
-            cursor.execute(
-                "UPDATE users SET reset_token=%s, reset_expiry=%s WHERE id=%s",
-                (token, expiry, user[0])
-            )
+            cursor.execute("UPDATE users SET reset_token=%s, reset_expiry=%s WHERE id=%s", (token, expiry, user[0]))
             db.commit()
-
-            # Send reset email via SendGrid
             reset_url = url_for('reset_password', token=token, _external=True)
-            html = f"""
-            <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;">
-                <div style="background:#1a1a2e;color:white;padding:24px;text-align:center;">
-                    <h1 style="margin:0;">FinGuard</h1>
-                    <p style="color:#a0aec0;margin:4px 0 0;">Password Reset</p>
-                </div>
-                <div style="padding:28px;">
-                    <p>Hi <strong>{user[1]}</strong>,</p>
-                    <p style="color:#555;">You requested a password reset. Click the button below:</p>
-                    <div style="text-align:center;margin:28px 0;">
-                        <a href="{reset_url}" style="background:#0f3460;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Reset Password</a>
-                    </div>
-                    <p style="color:#a0aec0;font-size:0.85rem;">This link expires in 1 hour. If you didn't request this, ignore this email.</p>
-                    <p>— FinGuard Team</p>
-                </div>
-            </div>"""
-            send_email(email, "FinGuard — Password Reset Request", html)
-
+            send_reset_email(email, user[1], reset_url)
         cursor.close(); db.close()
-        # Always show success (don't reveal if email exists)
         flash("If that email is registered, a reset link has been sent.", "success")
         return redirect(url_for('login'))
-
     return render_template('forgot.html')
 
 # ── Reset Password ────────────────────────────────────────────
 @app.route('/reset-password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     db = get_db(); cursor = db.cursor()
-    cursor.execute(
-        "SELECT id FROM users WHERE reset_token=%s AND reset_expiry > %s",
-        (token, datetime.now())
-    )
+    cursor.execute("SELECT id FROM users WHERE reset_token=%s AND reset_expiry > %s", (token, datetime.now()))
     user = cursor.fetchone()
-
     if not user:
         cursor.close(); db.close()
         flash("Reset link is invalid or has expired.", "error")
         return redirect(url_for('forgot_password'))
-
     if request.method == 'POST':
         password         = request.form['password']
         confirm_password = request.form['confirm_password']
-
         if len(password) < 6:
             flash("Password must be at least 6 characters.", "error")
             return render_template('reset.html', token=token)
-
         if password != confirm_password:
             flash("Passwords do not match.", "error")
             return render_template('reset.html', token=token)
-
         new_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-        cursor.execute(
-            "UPDATE users SET password_hash=%s, reset_token=NULL, reset_expiry=NULL WHERE id=%s",
-            (new_hash, user[0])
-        )
+        cursor.execute("UPDATE users SET password_hash=%s, reset_token=NULL, reset_expiry=NULL WHERE id=%s", (new_hash, user[0]))
         db.commit()
         cursor.close(); db.close()
         flash("Password reset successful! Please login.", "success")
         return redirect(url_for('login'))
-
     cursor.close(); db.close()
     return render_template('reset.html', token=token)
 
