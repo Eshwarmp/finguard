@@ -80,7 +80,7 @@ def send_email(to_email, subject, html_content):
             print("SendGrid API key not set")
             return False
         message = SGMail(
-            from_email=MAIL_USER,
+            from_email=(MAIL_USER, "FinGuard"),
             to_emails=to_email,
             subject=subject,
             html_content=html_content
