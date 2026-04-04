@@ -21,8 +21,8 @@ def get_db():
     return mysql.connector.connect(
         host=os.environ.get("DB_HOST", "localhost"),
         user=os.environ.get("DB_USER", "root"),
-        password=os.environ.get("DB_PASSWORD", ""),
-        database=os.environ.get("DB_NAME", "railway"),
+        password=os.environ.get("DB_PASSWORD", "Eshwar02@sql"),
+        database=os.environ.get("DB_NAME", "expense_tracker"),
         port=int(os.environ.get("DB_PORT", 3306))
     )
 
@@ -86,76 +86,80 @@ def send_email(to_email, subject, html_content):
             html_content=html_content
         )
         sg = SendGridAPIClient(SENDGRID_API_KEY)
-        sg.send(message)
+        response = sg.send(message)
+        print(f"Email sent to {to_email}, status: {response.status_code}")
         return True
     except Exception as e:
         print(f"Email failed: {e}")
         return False
 
+EMAIL_HEADER = (
+    '<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;">'
+    '<div style="background:#1a1a2e;color:white;padding:24px;text-align:center;">'
+    '<div style="font-size:2rem;margin-bottom:8px;">🛡️</div>'
+    '<h1 style="margin:0;font-size:1.4rem;letter-spacing:-0.5px;">FinGuard</h1>'
+    '<p style="color:#a0aec0;margin:4px 0 0;font-size:0.85rem;">{subtitle}</p>'
+    '</div>'
+    '<div style="padding:28px;">'
+)
+EMAIL_FOOTER = (
+    '</div>'
+    '<div style="background:#f7fafc;padding:14px;text-align:center;font-size:0.75rem;color:#a0aec0;">'
+    'This is an automated message from FinGuard. Do not reply to this email.'
+    '</div>'
+    '</div>'
+)
+
 def send_fraud_email(user_email, username, amount, category, description, fraud_reason):
     html = (
-        '<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;">'
-        '<div style="background:#1a1a2e;color:white;padding:24px;text-align:center;">'
-        '<h1 style="margin:0;">FinGuard</h1>'
-        '<p style="color:#a0aec0;margin:4px 0 0;">Fraud Detection Alert</p>'
-        '</div>'
-        '<div style="padding:28px;">'
+        EMAIL_HEADER.format(subtitle="Fraud Detection Alert") +
         f'<p>Hi <strong>{username}</strong>,</p>'
-        '<p style="color:#555;">A suspicious transaction was detected:</p>'
+        '<p style="color:#555;">A suspicious transaction was detected on your account:</p>'
         '<div style="background:#fff5f5;border-left:4px solid #e53e3e;border-radius:6px;padding:16px;margin:20px 0;">'
         f'<p><strong>Amount:</strong> Rs.{amount:.2f}</p>'
         f'<p><strong>Category:</strong> {category}</p>'
         f'<p><strong>Description:</strong> {description or "-"}</p>'
         f'<p style="color:#c53030;"><strong>Reason:</strong> {fraud_reason}</p>'
         '</div>'
-        '<p>If you made this transaction, ignore this alert. Otherwise review your account immediately.</p>'
-        '<p>- FinGuard Team</p>'
-        '</div></div>'
+        '<p>If you made this transaction, you can ignore this alert. If not, please review your account immediately.</p>'
+        '<p style="margin-top:20px;">- FinGuard Team</p>' +
+        EMAIL_FOOTER
     )
-    return send_email(user_email, "Fraud Alert - Suspicious Transaction on FinGuard", html)
+    return send_email(user_email, "🚨 Fraud Alert - Suspicious Transaction on FinGuard", html)
 
 def send_welcome_email(user_email, username):
     html = (
-        '<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;">'
-        '<div style="background:#1a1a2e;color:white;padding:24px;text-align:center;">'
-        '<h1 style="margin:0;">FinGuard</h1>'
-        '<p style="color:#a0aec0;margin:4px 0 0;">Welcome aboard!</p>'
-        '</div>'
-        '<div style="padding:28px;">'
+        EMAIL_HEADER.format(subtitle="Welcome aboard!") +
         f'<p>Hi <strong>{username}</strong>, welcome to FinGuard!</p>'
-        '<p style="color:#555;">You can now:</p>'
+        '<p style="color:#555;">Your account has been created successfully. Here\'s what you can do:</p>'
         '<ul style="color:#555;line-height:2;">'
-        '<li>Track your daily expenses by category</li>'
-        '<li>Get instant fraud alerts on suspicious transactions</li>'
-        '<li>Set monthly budgets and track your spending</li>'
-        '<li>Export your transactions as CSV anytime</li>'
+        '<li>📊 Track your daily expenses by category</li>'
+        '<li>🚨 Get instant fraud alerts on suspicious transactions</li>'
+        '<li>📅 Set monthly budgets and track your spending</li>'
+        '<li>📥 Export your transactions as CSV anytime</li>'
         '</ul>'
         '<div style="text-align:center;margin:28px 0;">'
-        '<a href="https://finguards.up.railway.app" style="background:#0f3460;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Go to Dashboard</a>'
+        '<a href="https://finguards.up.railway.app" style="background:#0f3460;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Go to Dashboard →</a>'
         '</div>'
-        '<p>- FinGuard Team</p>'
-        '</div></div>'
+        '<p style="margin-top:20px;">- FinGuard Team</p>' +
+        EMAIL_FOOTER
     )
-    return send_email(user_email, "Welcome to FinGuard!", html)
+    return send_email(user_email, "🛡️ Welcome to FinGuard!", html)
 
 def send_reset_email(user_email, username, reset_url):
     html = (
-        '<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;">'
-        '<div style="background:#1a1a2e;color:white;padding:24px;text-align:center;">'
-        '<h1 style="margin:0;">FinGuard</h1>'
-        '<p style="color:#a0aec0;margin:4px 0 0;">Password Reset</p>'
-        '</div>'
-        '<div style="padding:28px;">'
+        EMAIL_HEADER.format(subtitle="Password Reset Request") +
         f'<p>Hi <strong>{username}</strong>,</p>'
-        '<p style="color:#555;">You requested a password reset. Click below to set a new password:</p>'
+        '<p style="color:#555;">You requested a password reset. Click the button below to set a new password:</p>'
         '<div style="text-align:center;margin:28px 0;">'
-        f'<a href="{reset_url}" style="background:#0f3460;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Reset Password</a>'
+        f'<a href="{reset_url}" style="background:#0f3460;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Reset Password →</a>'
         '</div>'
-        '<p style="color:#a0aec0;font-size:0.85rem;">This link expires in 1 hour. If you did not request this, ignore this email.</p>'
-        '<p>- FinGuard Team</p>'
-        '</div></div>'
+        '<p style="color:#718096;font-size:0.85rem;">Or copy this link: ' + f'<a href="{reset_url}">{reset_url}</a></p>'
+        '<p style="color:#a0aec0;font-size:0.85rem;margin-top:16px;">This link expires in 1 hour. If you did not request this, ignore this email.</p>'
+        '<p style="margin-top:20px;">- FinGuard Team</p>' +
+        EMAIL_FOOTER
     )
-    return send_email(user_email, "FinGuard - Password Reset Request", html)
+    return send_email(user_email, "🔒 FinGuard - Password Reset Request", html)
 
 # ── Signup ───────────────────────────────────────────────────
 @app.route('/signup', methods=['GET', 'POST'])
@@ -196,14 +200,21 @@ def login():
         username = request.form['username'].strip()
         password = request.form['password']
         db = get_db(); cursor = db.cursor()
-        cursor.execute("SELECT id, username, password_hash FROM users WHERE username = %s", (username,))
+        cursor.execute("SELECT id, username, password_hash, last_login FROM users WHERE username = %s", (username,))
         user = cursor.fetchone()
-        cursor.close(); db.close()
         if user and bcrypt.checkpw(password.encode('utf-8'), user[2].encode('utf-8')):
+            is_first_login = user[3] is None
+            cursor.execute("UPDATE users SET last_login = %s WHERE id = %s", (datetime.now(), user[0]))
+            db.commit()
+            cursor.close(); db.close()
             session['user_id']  = user[0]
             session['username'] = user[1]
-            flash(f"Welcome back, {user[1]}!", "success")
+            if is_first_login:
+                flash(f"Welcome, {user[1]}! Your account is all set.", "success")
+            else:
+                flash(f"Welcome back, {user[1]}!", "success")
             return redirect(url_for('home'))
+        cursor.close(); db.close()
         flash("Invalid username or password.", "error")
     return render_template('login.html')
 
