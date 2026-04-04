@@ -7,22 +7,15 @@ import io
 import secrets
 from collections import defaultdict
 from functools import wraps
-from flask_mail import Mail, Message
 from datetime import datetime, timedelta
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail as SGMail
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "finguard_secret_2024")
 DB_PASSWORD = os.environ.get("DB_PASSWORD", "Eshwar02@sql")
-
-app.config['MAIL_SERVER']         = 'smtp.gmail.com'
-app.config['MAIL_PORT']           = 465
-app.config['MAIL_USE_TLS']        = False
-app.config['MAIL_USE_SSL']        = True
-app.config['MAIL_USERNAME']       = os.environ.get("MAIL_USER", "")
-app.config['MAIL_PASSWORD']       = os.environ.get("MAIL_PASS", "")
-app.config['MAIL_DEFAULT_SENDER'] = os.environ.get("MAIL_USER", "")
-app.config['MAIL_TIMEOUT']        = 10
-mail = Mail(app)
+SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
+MAIL_USER = os.environ.get("MAIL_USER", "")
 
 def get_db():
     return mysql.connector.connect(
@@ -80,35 +73,49 @@ def detect_fraud(amount, category, all_transactions):
 
     return len(flags) > 0, "; ".join(flags)
 
-def send_fraud_email(user_email, username, amount, category, description, fraud_reason):
+# ── Email helper (SendGrid HTTP API) ────────────────────────
+def send_email(to_email, subject, html_content):
     try:
-        msg = Message(subject="Fraud Alert - Suspicious Transaction on FinGuard", recipients=[user_email])
-        msg.html = f"""
-        <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;">
-            <div style="background:#1a1a2e;color:white;padding:24px;text-align:center;">
-                <h1 style="margin:0;">FinGuard</h1>
-                <p style="color:#a0aec0;margin:4px 0 0;">Fraud Detection Alert</p>
-            </div>
-            <div style="padding:28px;">
-                <p>Hi <strong>{username}</strong>,</p>
-                <p style="color:#555;">A suspicious transaction was detected:</p>
-                <div style="background:#fff5f5;border-left:4px solid #e53e3e;border-radius:6px;padding:16px;margin:20px 0;">
-                    <table style="width:100%;color:#333;">
-                        <tr><td style="color:#718096;padding:4px 0;">Amount</td><td><strong>Rs.{amount:.2f}</strong></td></tr>
-                        <tr><td style="color:#718096;padding:4px 0;">Category</td><td>{category}</td></tr>
-                        <tr><td style="color:#718096;padding:4px 0;">Description</td><td>{description or '-'}</td></tr>
-                        <tr><td style="color:#718096;padding:4px 0;vertical-align:top;">Reason</td><td style="color:#c53030;">{fraud_reason}</td></tr>
-                    </table>
-                </div>
-                <p>If you made this transaction, ignore this alert. Otherwise review your account immediately.</p>
-                <p>- FinGuard Team</p>
-            </div>
-        </div>"""
-        mail.send(msg)
+        if not SENDGRID_API_KEY:
+            print("SendGrid API key not set")
+            return False
+        message = SGMail(from_email=MAIL_USER, to_emails=to_email, subject=subject, html_content=html_content)
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        sg.send(message)
         return True
     except Exception as e:
         print(f"Email failed: {e}")
         return False
+
+def send_fraud_email(user_email, username, amount, category, description, fraud_reason):
+    html = f\"\"\"
+    <div style=\"font-family:Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;\">
+        <div style=\"background:#1a1a2e;color:white;padding:24px;text-align:center;\">
+            <h1 style=\"margin:0;\">FinGuard</h1><p style=\"color:#a0aec0;margin:4px 0 0;\">Fraud Detection Alert</p>
+        </div>
+        <div style=\"padding:28px;\">
+            <p>Hi <strong>{username}</strong>,</p>
+            <p>A suspicious transaction was detected: <strong>Rs.{amount:.2f}</strong> in {category}.</p>
+            <p style=\"color:#c53030;\">Reason: {fraud_reason}</p>
+            <p>If you made this transaction, ignore this alert. Otherwise review your account immediately.</p>
+            <p>- FinGuard Team</p>
+        </div>
+    </div>\"\"\"
+    return send_email(user_email, "Fraud Alert - Suspicious Transaction on FinGuard", html)
+
+def send_welcome_email(user_email, username):
+    html = f\"\"\"
+    <div style=\"font-family:Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;\">
+        <div style=\"background:#1a1a2e;color:white;padding:24px;text-align:center;\">
+            <h1 style=\"margin:0;\">FinGuard</h1><p style=\"color:#a0aec0;margin:4px 0 0;\">Welcome aboard!</p>
+        </div>
+        <div style=\"padding:28px;\">
+            <p>Hi <strong>{username}</strong>, welcome to FinGuard!</p>
+            <p>You can now track expenses, detect fraud, set budgets and export your data.</p>
+            <p>- FinGuard Team</p>
+        </div>
+    </div>\"\"\"
+    return send_email(user_email, "Welcome to FinGuard!", html)
 
 # ── Signup ───────────────────────────────────────────────────
 @app.route('/signup', methods=['GET', 'POST'])
@@ -129,6 +136,7 @@ def signup():
         try:
             cursor.execute("INSERT INTO users (username, email, password_hash) VALUES (%s,%s,%s)", (username, email, hashed))
             db.commit()
+            send_welcome_email(email, username)
             flash("Account created! Please login.", "success")
             return redirect(url_for('login'))
         except mysql.connector.IntegrityError:
@@ -428,34 +436,25 @@ def forgot_password():
             )
             db.commit()
 
-            # Send reset email
+            # Send reset email via SendGrid
             reset_url = url_for('reset_password', token=token, _external=True)
-            try:
-                msg = Message(
-                    subject="FinGuard — Password Reset Request",
-                    recipients=[email]
-                )
-                msg.html = f"""
-                <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;">
-                    <div style="background:#1a1a2e;color:white;padding:24px;text-align:center;">
-                        <h1 style="margin:0;">FinGuard</h1>
-                        <p style="color:#a0aec0;margin:4px 0 0;">Password Reset</p>
+            html = f"""
+            <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;">
+                <div style="background:#1a1a2e;color:white;padding:24px;text-align:center;">
+                    <h1 style="margin:0;">FinGuard</h1>
+                    <p style="color:#a0aec0;margin:4px 0 0;">Password Reset</p>
+                </div>
+                <div style="padding:28px;">
+                    <p>Hi <strong>{user[1]}</strong>,</p>
+                    <p style="color:#555;">You requested a password reset. Click the button below:</p>
+                    <div style="text-align:center;margin:28px 0;">
+                        <a href="{reset_url}" style="background:#0f3460;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Reset Password</a>
                     </div>
-                    <div style="padding:28px;">
-                        <p>Hi <strong>{user[1]}</strong>,</p>
-                        <p style="color:#555;">You requested a password reset. Click the button below:</p>
-                        <div style="text-align:center;margin:28px 0;">
-                            <a href="{reset_url}" style="background:#0f3460;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Reset Password</a>
-                        </div>
-                        <p style="color:#a0aec0;font-size:0.85rem;">This link expires in 1 hour. If you didn't request this, ignore this email.</p>
-                        <p>— FinGuard Team</p>
-                    </div>
-                </div>"""
-                mail.send(msg)
-                print(f"Reset email sent to {email}")
-            except Exception as e:
-                print(f"Reset email failed: {e}")
-                # Don't crash — token is saved, user can try again
+                    <p style="color:#a0aec0;font-size:0.85rem;">This link expires in 1 hour. If you didn't request this, ignore this email.</p>
+                    <p>— FinGuard Team</p>
+                </div>
+            </div>"""
+            send_email(email, "FinGuard — Password Reset Request", html)
 
         cursor.close(); db.close()
         # Always show success (don't reveal if email exists)
