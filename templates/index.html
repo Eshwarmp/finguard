@@ -17,6 +17,7 @@
         <div class="header-user">
             <span>👤 {{ username }}</span>
             <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark</button>
+            <a href="/analytics" class="btn-nav">📊 Analytics</a>
             <a href="/fraud" class="btn-nav">🚨 Fraud History</a>
             <a href="/profile" class="btn-nav">⚙️ Profile</a>
             <a href="/logout" class="btn-logout">Logout</a>
@@ -114,6 +115,31 @@
         <h2>All Transactions</h2>
         <a href="/export" class="btn-export">⬇️ Export CSV</a>
     </div>
+
+    <!-- Search & Filter Bar -->
+    <form class="filter-bar" method="GET" action="/">
+        <input type="text" name="search" placeholder="🔍 Search description..." value="{{ search }}">
+        <select name="category">
+            <option value="">All Categories</option>
+            <option value="Food" {{ 'selected' if category_f == 'Food' }}>🍔 Food</option>
+            <option value="Travel" {{ 'selected' if category_f == 'Travel' }}>✈️ Travel</option>
+            <option value="Bills" {{ 'selected' if category_f == 'Bills' }}>🧾 Bills</option>
+            <option value="Shopping" {{ 'selected' if category_f == 'Shopping' }}>🛍️ Shopping</option>
+            <option value="Entertainment" {{ 'selected' if category_f == 'Entertainment' }}>🎬 Entertainment</option>
+            <option value="Others" {{ 'selected' if category_f == 'Others' }}>📦 Others</option>
+        </select>
+        <select name="status">
+            <option value="">All Status</option>
+            <option value="safe" {{ 'selected' if status_f == 'safe' }}>✅ Safe</option>
+            <option value="fraud" {{ 'selected' if status_f == 'fraud' }}>🚨 Fraud</option>
+        </select>
+        <input type="date" name="date_from" value="{{ date_from }}" title="From date">
+        <input type="date" name="date_to" value="{{ date_to }}" title="To date">
+        <button type="submit" class="btn-filter">Filter</button>
+        {% if search or category_f or date_from or date_to or status_f %}
+        <a href="/" class="btn-clear">✕ Clear</a>
+        {% endif %}
+    </form>
     {% if transactions %}
     <table>
         <tr>

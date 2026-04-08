@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FinGuard — Analytics</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-inner">
+        <div>
+            <h1>🛡️ FinGuard</h1>
+            <p class="subtitle">Analytics & Insights</p>
+        </div>
+        <div class="header-user">
+            <span>👤 {{ username }}</span>
+            <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark</button>
+            <a href="/" class="btn-nav">← Dashboard</a>
+            <a href="/fraud" class="btn-nav">🚨 Fraud History</a>
+            <a href="/profile" class="btn-nav">⚙️ Profile</a>
+            <a href="/logout" class="btn-logout">Logout</a>
+        </div>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-top">{{ message }}</div>
+    {% endfor %}
+{% endwith %}
+
+<div class="page-body">
+
+    <!-- Summary Cards -->
+    <div class="cards" style="padding: 24px 0 0;">
+        <div class="card">
+            <div class="card-icon">📅</div>
+            <div class="card-label">This Month</div>
+            <div class="card-value">₹{{ "%.2f"|format(this_month) }}</div>
+        </div>
+        <div class="card {{ 'card-danger' if month_change > 20 else 'card-warning' if month_change > 0 else '' }}">
+            <div class="card-icon">{{ '📈' if month_change > 0 else '📉' }}</div>
+            <div class="card-label">vs Last Month</div>
+            <div class="card-value">{{ '+' if month_change > 0 else '' }}{{ month_change }}%</div>
+        </div>
+        <div class="card card-danger">
+            <div class="card-icon">🚨</div>
+            <div class="card-label">Fraud Transactions</div>
+            <div class="card-value">{{ fraud_count }}</div>
+        </div>
+        <div class="card">
+            <div class="card-icon">✅</div>
+            <div class="card-label">Safe Transactions</div>
+            <div class="card-value">{{ safe_count }}</div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="analytics-grid">
+
+        <!-- Monthly Trend -->
+        <div class="analytics-card">
+            <h3>📈 Monthly Spending Trend</h3>
+            {% if monthly_data %}
+            <canvas id="lineChart" height="200"></canvas>
+            {% else %}
+            <p class="no-data">Not enough data yet. Add more transactions!</p>
+            {% endif %}
+        </div>
+
+        <!-- Category Breakdown -->
+        <div class="analytics-card">
+            <h3>🍕 Spending by Category</h3>
+            {% if category_breakdown %}
+            <canvas id="barChart" height="200"></canvas>
+            {% else %}
+            <p class="no-data">No transactions yet.</p>
+            {% endif %}
+        </div>
+
+        <!-- Fraud vs Safe -->
+        <div class="analytics-card">
+            <h3>🛡️ Fraud vs Safe</h3>
+            {% if fraud_count + safe_count > 0 %}
+            <canvas id="doughnutChart" height="200"></canvas>
+            {% else %}
+            <p class="no-data">No transactions yet.</p>
+            {% endif %}
+        </div>
+
+        <!-- Category Table -->
+        <div class="analytics-card">
+            <h3>📊 Category Breakdown</h3>
+            {% if category_breakdown %}
+            <table class="analytics-table">
+                <tr><th>Category</th><th>Total Spent</th><th>Transactions</th><th>Avg/Transaction</th></tr>
+                {% for cat in category_breakdown %}
+                <tr>
+                    <td>{{ cat[0] }}</td>
+                    <td>₹{{ "%.2f"|format(cat[1]) }}</td>
+                    <td>{{ cat[2] }}</td>
+                    <td>₹{{ "%.2f"|format(cat[1] / cat[2]) }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p class="no-data">No data yet.</p>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- Top Transactions -->
+    <div style="margin-top: 24px;">
+        <div class="table-header">
+            <h2>💰 Top 5 Highest Transactions</h2>
+        </div>
+        {% if top_transactions %}
+        <table>
+            <tr>
+                <th>ID</th><th>Amount</th><th>Category</th>
+                <th>Description</th><th>Date</th><th>Status</th>
+            </tr>
+            {% for t in top_transactions %}
+            <tr class="{{ 'fraud-row' if t[6] else '' }}">
+                <td>{{ t[0] }}</td>
+                <td>₹{{ "%.2f"|format(t[2]) }}</td>
+                <td>{{ t[3] }}</td>
+                <td>{{ t[4] or '—' }}</td>
+                <td>{{ t[5] }}</td>
+                <td>
+                    {% if t[6] %}
+                        <span class="badge-fraud">🚨 Fraud</span>
+                    {% else %}
+                        <span class="badge-safe">✅ Safe</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p class="no-data">No transactions yet.</p>
+        {% endif %}
+    </div>
+
+</div>
+
+{% if monthly_data %}
+<script>
+const lineLabels = [{% for m in monthly_data %}"{{ m[0] }}",{% endfor %}];
+const lineValues = [{% for m in monthly_data %}{{ m[3] }},{% endfor %}];
+new Chart(document.getElementById('lineChart'), {
+    type: 'line',
+    data: {
+        labels: lineLabels,
+        datasets: [{
+            label: 'Monthly Spending (₹)',
+            data: lineValues,
+            borderColor: '#0f3460',
+            backgroundColor: 'rgba(15,52,96,0.08)',
+            borderWidth: 2.5,
+            pointBackgroundColor: '#0f3460',
+            pointRadius: 5,
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+    }
+});
+</script>
+{% endif %}
+
+{% if category_breakdown %}
+<script>
+const barLabels = [{% for c in category_breakdown %}"{{ c[0] }}",{% endfor %}];
+const barValues = [{% for c in category_breakdown %}{{ c[1] }},{% endfor %}];
+const barColors = ['#4CAF50','#2196F3','#FF9800','#E91E63','#9C27B0','#00BCD4'];
+new Chart(document.getElementById('barChart'), {
+    type: 'bar',
+    data: {
+        labels: barLabels,
+        datasets: [{
+            label: 'Amount (₹)',
+            data: barValues,
+            backgroundColor: barColors,
+            borderRadius: 6
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+    }
+});
+</script>
+{% endif %}
+
+{% if fraud_count + safe_count > 0 %}
+<script>
+new Chart(document.getElementById('doughnutChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Safe', 'Fraud'],
+        datasets: [{
+            data: [{{ safe_count }}, {{ fraud_count }}],
+            backgroundColor: ['#48bb78', '#e53e3e'],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } }
+    }
+});
+</script>
+{% endif %}
+
+<script>
+function applyTheme(dark) {
+    document.body.classList.toggle('dark', dark);
+    const btn = document.getElementById('themeBtn');
+    if (btn) btn.textContent = dark ? '☀️ Light' : '🌙 Dark';
+}
+function toggleTheme() {
+    const isDark = !document.body.classList.contains('dark');
+    localStorage.setItem('finguard_theme', isDark ? 'dark' : 'light');
+    applyTheme(isDark);
+}
+(function() {
+    const saved = localStorage.getItem('finguard_theme');
+    if (saved === 'dark') applyTheme(true);
+})();
+</script>
+
+</body>
+</html>

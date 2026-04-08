@@ -232,8 +232,39 @@ def home():
     db = get_db(); cursor = db.cursor()
     uid = session['user_id']
     now = datetime.now()
-    cursor.execute("SELECT * FROM transactions WHERE user_id = %s ORDER BY date DESC", (uid,))
+
+    # ── Search & Filter params ───────────────────────────────
+    search      = request.args.get('search', '').strip()
+    category_f  = request.args.get('category', '')
+    date_from   = request.args.get('date_from', '')
+    date_to     = request.args.get('date_to', '')
+    status_f    = request.args.get('status', '')
+
+    query  = "SELECT * FROM transactions WHERE user_id = %s"
+    params = [uid]
+
+    if search:
+        query += " AND description LIKE %s"
+        params.append(f"%{search}%")
+    if category_f:
+        query += " AND category = %s"
+        params.append(category_f)
+    if date_from:
+        query += " AND DATE(date) >= %s"
+        params.append(date_from)
+    if date_to:
+        query += " AND DATE(date) <= %s"
+        params.append(date_to)
+    if status_f == 'fraud':
+        query += " AND is_fraud = TRUE"
+    elif status_f == 'safe':
+        query += " AND is_fraud = FALSE"
+
+    query += " ORDER BY date DESC"
+    cursor.execute(query, params)
     data = cursor.fetchall()
+
+    # ── Dashboard stats (always full, not filtered) ──────────
     cursor.execute("SELECT SUM(amount) FROM transactions WHERE user_id = %s", (uid,))
     total = cursor.fetchone()[0] or 0
     cursor.execute("SELECT SUM(amount) FROM transactions WHERE user_id = %s AND is_fraud = TRUE", (uid,))
@@ -247,18 +278,89 @@ def home():
     cursor.execute("SELECT monthly_budget FROM users WHERE id = %s", (uid,))
     budget_row = cursor.fetchone()
     monthly_budget = budget_row[0] if budget_row and budget_row[0] else None
+
     cursor.close(); db.close()
+
     budget_percent = None
     budget_status  = None
     if monthly_budget and monthly_budget > 0:
         budget_percent = round((monthly_spent / monthly_budget) * 100, 1)
         budget_status  = "over" if budget_percent >= 100 else ("warning" if budget_percent >= 80 else "safe")
+
     return render_template('index.html',
         transactions=data, total=round(total,2),
         fraud_total=round(fraud_total,2), fraud_count=fraud_count,
         category_data=category_data, username=session['username'],
         monthly_spent=round(monthly_spent,2), monthly_budget=monthly_budget,
-        budget_percent=budget_percent, budget_status=budget_status)
+        budget_percent=budget_percent, budget_status=budget_status,
+        search=search, category_f=category_f, date_from=date_from,
+        date_to=date_to, status_f=status_f)
+
+# ── Analytics ────────────────────────────────────────────────
+@app.route('/analytics')
+@login_required
+def analytics():
+    db = get_db(); cursor = db.cursor()
+    uid = session['user_id']
+    now = datetime.now()
+
+    # Monthly spending for last 6 months
+    cursor.execute("""
+        SELECT DATE_FORMAT(date, '%b %Y') as month,
+               MONTH(date) as m, YEAR(date) as y,
+               SUM(amount) as total
+        FROM transactions
+        WHERE user_id = %s AND date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+        GROUP BY YEAR(date), MONTH(date)
+        ORDER BY YEAR(date), MONTH(date)
+    """, (uid,))
+    monthly_data = cursor.fetchall()
+
+    # Category breakdown
+    cursor.execute("""
+        SELECT category, SUM(amount) as total, COUNT(*) as count
+        FROM transactions WHERE user_id = %s
+        GROUP BY category ORDER BY total DESC
+    """, (uid,))
+    category_breakdown = cursor.fetchall()
+
+    # Top 5 biggest transactions
+    cursor.execute("""
+        SELECT * FROM transactions WHERE user_id = %s
+        ORDER BY amount DESC LIMIT 5
+    """, (uid,))
+    top_transactions = cursor.fetchall()
+
+    # Fraud vs Safe count
+    cursor.execute("SELECT COUNT(*) FROM transactions WHERE user_id=%s AND is_fraud=TRUE", (uid,))
+    fraud_count = cursor.fetchone()[0] or 0
+    cursor.execute("SELECT COUNT(*) FROM transactions WHERE user_id=%s AND is_fraud=FALSE", (uid,))
+    safe_count = cursor.fetchone()[0] or 0
+
+    # This month vs last month
+    cursor.execute("SELECT SUM(amount) FROM transactions WHERE user_id=%s AND MONTH(date)=%s AND YEAR(date)=%s",
+        (uid, now.month, now.year))
+    this_month = cursor.fetchone()[0] or 0
+
+    last_month = now.month - 1 if now.month > 1 else 12
+    last_year  = now.year if now.month > 1 else now.year - 1
+    cursor.execute("SELECT SUM(amount) FROM transactions WHERE user_id=%s AND MONTH(date)=%s AND YEAR(date)=%s",
+        (uid, last_month, last_year))
+    prev_month = cursor.fetchone()[0] or 0
+
+    cursor.close(); db.close()
+
+    month_change = round(((this_month - prev_month) / prev_month * 100), 1) if prev_month > 0 else 0
+
+    return render_template('analytics.html',
+        username=session['username'],
+        monthly_data=monthly_data,
+        category_breakdown=category_breakdown,
+        top_transactions=top_transactions,
+        fraud_count=fraud_count, safe_count=safe_count,
+        this_month=round(this_month, 2),
+        prev_month=round(prev_month, 2),
+        month_change=month_change)
 
 # ── Add Expense ──────────────────────────────────────────────
 @app.route('/add', methods=['POST'])
