@@ -311,7 +311,7 @@ def analytics():
                SUM(amount) as total
         FROM transactions
         WHERE user_id = %s AND date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
-        GROUP BY YEAR(date), MONTH(date)
+        GROUP BY YEAR(date), MONTH(date), DATE_FORMAT(date, '%b %Y')
         ORDER BY YEAR(date), MONTH(date)
     """, (uid,))
     monthly_data = cursor.fetchall()
