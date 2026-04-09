@@ -990,6 +990,7 @@ body.dark .filter-bar select {
     border-radius: 14px;
     padding: 24px;
     box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    overflow: hidden;
 }
 
 .analytics-card h3 {
@@ -1003,12 +1004,14 @@ body.dark .filter-bar select {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.88rem;
+    margin: 0 -24px;
+    width: calc(100% + 48px);
 }
 
 .analytics-table th {
     background: #1a1a2e;
     color: white;
-    padding: 10px 12px;
+    padding: 10px 16px;
     text-align: left;
     font-size: 0.78rem;
     text-transform: uppercase;
@@ -1016,7 +1019,7 @@ body.dark .filter-bar select {
 }
 
 .analytics-table td {
-    padding: 10px 12px;
+    padding: 10px 16px;
     border-bottom: 1px solid #f0f2f5;
 }
 
