@@ -15,6 +15,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "finguard_secret_2024")
 
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 resend.api_key = RESEND_API_KEY
+print(f"Resend API key loaded: {'YES' if RESEND_API_KEY else 'NO - KEY MISSING'}")
 
 def get_db():
     return mysql.connector.connect(
@@ -76,18 +77,19 @@ def detect_fraud(amount, category, all_transactions):
 def send_email(to_email, subject, html_content):
     try:
         if not RESEND_API_KEY:
-            print("Resend API key not set")
+            print("ERROR: Resend API key not set")
             return False
+        print(f"Attempting to send email to {to_email} with subject: {subject}")
         response = resend.Emails.send({
             "from": "FinGuard <onboarding@resend.dev>",
             "to": [to_email],
             "subject": subject,
             "html": html_content
         })
-        print(f"Email sent to {to_email}, id: {response['id']}")
+        print(f"Email sent successfully to {to_email}, id: {response['id']}")
         return True
     except Exception as e:
-        print(f"Email failed: {e}")
+        print(f"Email failed with error: {type(e).__name__}: {e}")
         return False
 
 EMAIL_HEADER = (
