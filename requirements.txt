@@ -1,7 +1,6 @@
 flask
-flask-mail
 mysql-connector-python
 bcrypt
 python-dotenv
 gunicorn
-resend
+requests

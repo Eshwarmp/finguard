@@ -5,7 +5,7 @@ import bcrypt
 import csv
 import io
 import secrets
-import resend
+import requests
 from collections import defaultdict
 from functools import wraps
 from datetime import datetime, timedelta
@@ -13,9 +13,9 @@ from datetime import datetime, timedelta
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "finguard_secret_2024")
 
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
-resend.api_key = RESEND_API_KEY
-print(f"Resend API key loaded: {'YES' if RESEND_API_KEY else 'NO - KEY MISSING'}")
+BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
+MAIL_USER     = os.environ.get("MAIL_USER", "")
+print(f"Brevo API key loaded: {'YES' if BREVO_API_KEY else 'NO - KEY MISSING'}")
 
 def get_db():
     return mysql.connector.connect(
@@ -73,21 +73,32 @@ def detect_fraud(amount, category, all_transactions):
 
     return len(flags) > 0, "; ".join(flags)
 
-# ── Email helper (SendGrid HTTP API) ────────────────────────
+# ── Email helper (Brevo HTTP API) ───────────────────────────
 def send_email(to_email, subject, html_content):
     try:
-        if not RESEND_API_KEY:
-            print("ERROR: Resend API key not set")
+        if not BREVO_API_KEY:
+            print("ERROR: Brevo API key not set")
             return False
-        print(f"Attempting to send email to {to_email} with subject: {subject}")
-        response = resend.Emails.send({
-            "from": "FinGuard <onboarding@resend.dev>",
-            "to": [to_email],
-            "subject": subject,
-            "html": html_content
-        })
-        print(f"Email sent successfully to {to_email}, id: {response['id']}")
-        return True
+        print(f"Attempting to send email to {to_email}")
+        response = requests.post(
+            "https://api.brevo.com/v3/smtp/email",
+            headers={
+                "api-key": BREVO_API_KEY,
+                "Content-Type": "application/json"
+            },
+            json={
+                "sender": {"name": "FinGuard", "email": MAIL_USER},
+                "to": [{"email": to_email}],
+                "subject": subject,
+                "htmlContent": html_content
+            }
+        )
+        if response.status_code == 201:
+            print(f"Email sent successfully to {to_email}")
+            return True
+        else:
+            print(f"Email failed: {response.status_code} - {response.text}")
+            return False
     except Exception as e:
         print(f"Email failed with error: {type(e).__name__}: {e}")
         return False
