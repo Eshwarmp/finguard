@@ -20,15 +20,15 @@
 
 | Login Page | Dashboard |
 |-----------|-----------|
-| ![Login](screenshots/1-login.png) | ![Dashboard](screenshots/2-dashboard.png) |
+| ![Login](screenshots/login.png) | ![Dashboard](screenshots/dashboard.png) |
 
 | Fraud Detection | Analytics |
 |----------------|-----------|
-| ![Fraud](screenshots/3-fraud-detection.png) | ![Analytics](screenshots/4-analytics.png) |
+| ![Fraud](screenshots/fraud-detection.png) | ![Analytics](screenshots/analytics.png) |
 
 | Dark Mode | Email Alert |
 |-----------|-------------|
-| ![Dark Mode](screenshots/5-dark-mode.png) | ![Email](screenshots/6-email-alert.png) |
+| ![Dark Mode](screenshots/dark-mode.png) | ![Email](screenshots/email-alert.png) |
 
 ---
 
