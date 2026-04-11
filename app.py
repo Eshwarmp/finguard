@@ -5,17 +5,16 @@ import bcrypt
 import csv
 import io
 import secrets
+import resend
 from collections import defaultdict
 from functools import wraps
 from datetime import datetime, timedelta
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail as SGMail
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "finguard_secret_2024")
 
-SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
-MAIL_USER = os.environ.get("MAIL_USER", "")
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+resend.api_key = RESEND_API_KEY
 
 def get_db():
     return mysql.connector.connect(
@@ -76,18 +75,16 @@ def detect_fraud(amount, category, all_transactions):
 # ── Email helper (SendGrid HTTP API) ────────────────────────
 def send_email(to_email, subject, html_content):
     try:
-        if not SENDGRID_API_KEY:
-            print("SendGrid API key not set")
+        if not RESEND_API_KEY:
+            print("Resend API key not set")
             return False
-        message = SGMail(
-            from_email=(MAIL_USER, "FinGuard"),
-            to_emails=to_email,
-            subject=subject,
-            html_content=html_content
-        )
-        sg = SendGridAPIClient(SENDGRID_API_KEY)
-        response = sg.send(message)
-        print(f"Email sent to {to_email}, status: {response.status_code}")
+        response = resend.Emails.send({
+            "from": "FinGuard <onboarding@resend.dev>",
+            "to": [to_email],
+            "subject": subject,
+            "html": html_content
+        })
+        print(f"Email sent to {to_email}, id: {response['id']}")
         return True
     except Exception as e:
         print(f"Email failed: {e}")
