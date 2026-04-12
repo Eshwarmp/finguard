@@ -116,6 +116,34 @@ body.auth-page {
     outline: none;
 }
 
+/* Fix for profile page (light mode) — override the dark auth styles */
+.form-section .input-group input {
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    color: #1a1a2e;
+}
+
+.form-section .input-group input::placeholder {
+    color: #a0aec0;
+}
+
+.form-section .input-group input:focus {
+    background: white;
+    border-color: #0f3460;
+    outline: none;
+}
+
+/* Dark mode override for profile page */
+body.dark .form-section .input-group input {
+    background: #252b3b;
+    border-color: #374151;
+    color: #e2e8f0;
+}
+
+body.dark .form-section .input-group input::placeholder {
+    color: #6b7280;
+}
+
 .input-icon {
     position: absolute;
     left: 13px;
