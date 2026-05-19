@@ -1,10 +1,10 @@
 # 🛡️ FinGuard — Smart Expense Tracker with Fraud Detection
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-finguards.up.railway.app-blue?style=for-the-badge)](https://finguards.up.railway.app)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-finguard--1tp7.onrender.com-blue?style=for-the-badge)](https://finguard-1tp7.onrender.com)
 [![Python](https://img.shields.io/badge/Python-3.13-blue?style=for-the-badge&logo=python)](https://python.org)
 [![Flask](https://img.shields.io/badge/Flask-3.x-black?style=for-the-badge&logo=flask)](https://flask.palletsprojects.com)
-[![MySQL](https://img.shields.io/badge/MySQL-8.0-orange?style=for-the-badge&logo=mysql)](https://mysql.com)
-[![Railway](https://img.shields.io/badge/Deployed%20on-Railway-purple?style=for-the-badge)](https://railway.app)
+[![MySQL](https://img.shields.io/badge/MySQL-5.7-orange?style=for-the-badge&logo=mysql)](https://mysql.com)
+[![Render](https://img.shields.io/badge/Deployed%20on-Render-46E3B7?style=for-the-badge)](https://render.com)
 
 > A full-stack web application for tracking personal expenses with real-time rule-based fraud detection and instant email alerts via Brevo.
 
@@ -12,7 +12,9 @@
 
 ## 🌐 Live Demo
 
-**[https://finguards.up.railway.app](https://finguards.up.railway.app)**
+**[https://finguard-1tp7.onrender.com](https://finguard-1tp7.onrender.com)**
+
+> Note: First load may take 30-60 seconds as the free tier spins up from sleep.
 
 ---
 
@@ -84,10 +86,10 @@ Automatically flags suspicious transactions based on 5 rules:
 |-------|-----------|
 | Frontend | HTML, CSS, Jinja2, Chart.js |
 | Backend | Python, Flask |
-| Database | MySQL |
+| Database | MySQL (Filess.io) |
 | Authentication | bcrypt, Flask sessions |
 | Email | Brevo HTTP API |
-| Deployment | Railway |
+| Deployment | Render |
 | Version Control | GitHub |
 
 ---
@@ -98,7 +100,7 @@ Automatically flags suspicious transactions based on 5 rules:
 EXPENSE_TRACKER/
 ├── app.py                  # All backend routes and logic
 ├── requirements.txt        # Python dependencies
-├── Procfile                # Railway deployment config
+├── Procfile                # Render deployment config
 ├── screenshots/            # Project screenshots
 ├── static/
 │   └── style.css           # All styling + dark mode
@@ -183,29 +185,33 @@ http://localhost:5000
 
 ## 📧 Email Setup (Brevo)
 
-This project uses [Brevo](https://brevo.com) for transactional emails instead of SMTP, which works reliably on cloud deployments like Railway where SMTP ports are often blocked.
+This project uses [Brevo](https://brevo.com) for transactional emails instead of SMTP, which works reliably on cloud deployments like Render where SMTP ports are often blocked.
 
 To configure:
 1. Sign up at **brevo.com** (free — 300 emails/day)
-2. Go to **Transactional → Email → API Keys** → generate a key
-3. Add BREVO_API_KEY to your environment variables
+2. Go to **Settings → Senders, domains, IPs** → verify your sender email
+3. Go to **Transactional → Email → API Keys** → generate a key
+4. Go to **Settings → Security → Authorized IPs** → deactivate IP blocking for API keys
+5. Add `BREVO_API_KEY` and `MAIL_USER` to your environment variables
 
 ---
 
-## 🌐 Deployment (Railway)
+## 🌐 Deployment (Render + Filess.io)
 
-This app is deployed on [Railway](https://railway.app) with a Railway MySQL database.
+This app is deployed on [Render](https://render.com) with a [Filess.io](https://filess.io) MySQL database — both free forever with no expiry.
 
-Environment variables required on Railway:
+Environment variables required on Render:
+
 ```
 SECRET_KEY
-DB_HOST         (reference from MySQL service)
-DB_USER         (reference from MySQL service)
-DB_PASSWORD     (reference from MySQL service)
-DB_NAME
-DB_PORT
-MAIL_USER
-BREVO_API_KEY
+DB_HOST               (from Filess.io connection details)
+DB_USER               (from Filess.io connection details)
+DB_PASSWORD           (from Filess.io connection details)
+DB_NAME               (from Filess.io connection details)
+DB_PORT               (from Filess.io connection details)
+MAIL_USER             (your verified Brevo sender email)
+BREVO_API_KEY         (from Brevo API keys)
+RENDER_EXTERNAL_URL   https://finguard-1tp7.onrender.com
 ```
 
 ---
@@ -215,7 +221,7 @@ BREVO_API_KEY
 **Eshwar M P**
 - Department of Information Science & Engineering, NMIT Bengaluru
 - GitHub: [@Eshwarmp](https://github.com/Eshwarmp)
-- Live Project: [finguards.up.railway.app](https://finguards.up.railway.app)
+- Live Project: [finguard-1tp7.onrender.com](https://finguard-1tp7.onrender.com)
 
 ---
 
