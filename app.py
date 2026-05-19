@@ -11,6 +11,7 @@ from functools import wraps
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
+app.config['SERVER_NAME'] = None  # Let Flask auto-detect
 app.secret_key = os.environ.get("SECRET_KEY", "finguard_secret_2024")
 
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
@@ -556,7 +557,8 @@ def forgot_password():
             expiry = datetime.now() + timedelta(hours=1)
             cursor.execute("UPDATE users SET reset_token=%s, reset_expiry=%s WHERE id=%s", (token, expiry, user[0]))
             db.commit()
-            reset_url = url_for('reset_password', token=token, _external=True)
+            # reset_url = url_for('reset_password', token=token, _external=True)
+            reset_url = os.environ.get('RENDER_EXTERNAL_URL', '') + url_for('reset_password', token=token)
             send_reset_email(email, user[1], reset_url)
         cursor.close(); db.close()
         flash("If that email is registered, a reset link has been sent.", "success")
