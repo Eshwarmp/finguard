@@ -568,32 +568,29 @@ def forgot_password():
     return render_template('forgot.html')
 
 # ── Reset Password ────────────────────────────────────────────
-@app.route('/reset-password/<token>', methods=['GET', 'POST'])
-def reset_password(token):
-    db = get_db(); cursor = db.cursor()
-    cursor.execute("SELECT id FROM users WHERE reset_token=%s AND reset_expiry > %s", (token, datetime.now()))
-    user = cursor.fetchone()
-    if not user:
-        cursor.close(); db.close()
-        flash("Reset link is invalid or has expired.", "error")
-        return redirect(url_for('forgot_password'))
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
     if request.method == 'POST':
-        password         = request.form['password']
-        confirm_password = request.form['confirm_password']
-        if len(password) < 6:
-            flash("Password must be at least 6 characters.", "error")
-            return render_template('reset.html', token=token)
-        if password != confirm_password:
-            flash("Passwords do not match.", "error")
-            return render_template('reset.html', token=token)
-        new_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-        cursor.execute("UPDATE users SET password_hash=%s, reset_token=NULL, reset_expiry=NULL WHERE id=%s", (new_hash, user[0]))
-        db.commit()
+        email = request.form['email'].strip()
+        print(f"Forgot password requested for: {email}")
+        db = get_db(); cursor = db.cursor()
+        cursor.execute("SELECT id, username FROM users WHERE email = %s", (email,))
+        user = cursor.fetchone()
+        print(f"User found: {user}")
+        if user:
+            token  = secrets.token_urlsafe(32)
+            expiry = datetime.now() + timedelta(hours=1)
+            cursor.execute("UPDATE users SET reset_token=%s, reset_expiry=%s WHERE id=%s", (token, expiry, user[0]))
+            db.commit()
+            base_url  = os.environ.get('RENDER_EXTERNAL_URL', 'https://finguard-1tp7.onrender.com')
+            reset_url = f"{base_url}/reset-password/{token}"
+            print(f"Reset URL: {reset_url}")
+            result = send_reset_email(email, user[1], reset_url)
+            print(f"Email send result: {result}")
         cursor.close(); db.close()
-        flash("Password reset successful! Please login.", "success")
+        flash("If that email is registered, a reset link has been sent.", "success")
         return redirect(url_for('login'))
-    cursor.close(); db.close()
-    return render_template('reset.html', token=token)
+    return render_template('forgot.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
