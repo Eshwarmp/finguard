@@ -558,7 +558,9 @@ def forgot_password():
             cursor.execute("UPDATE users SET reset_token=%s, reset_expiry=%s WHERE id=%s", (token, expiry, user[0]))
             db.commit()
             # reset_url = url_for('reset_password', token=token, _external=True)
-            reset_url = os.environ.get('RENDER_EXTERNAL_URL', '') + url_for('reset_password', token=token)
+            # reset_url = os.environ.get('RENDER_EXTERNAL_URL', '') + url_for('reset_password', token=token)
+            base_url = os.environ.get('RENDER_EXTERNAL_URL', 'https://finguard-1tp7.onrender.com')
+            reset_url = f"{base_url}/reset-password/{token}"
             send_reset_email(email, user[1], reset_url)
         cursor.close(); db.close()
         flash("If that email is registered, a reset link has been sent.", "success")
