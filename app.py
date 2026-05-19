@@ -11,7 +11,6 @@ from functools import wraps
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
-app.config['SERVER_NAME'] = None  # Let Flask auto-detect
 app.secret_key = os.environ.get("SECRET_KEY", "finguard_secret_2024")
 
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
@@ -545,38 +544,13 @@ def profile():
         total_transactions=total_transactions, total_spent=round(total_spent,2), total_fraud=total_fraud)
 
 # ── Forgot Password ──────────────────────────────────────────
-# @app.route('/forgot-password', methods=['GET', 'POST'])
-# def forgot_password():
-#     if request.method == 'POST':
-#         email = request.form['email'].strip()
-#         db = get_db(); cursor = db.cursor()
-#         cursor.execute("SELECT id, username FROM users WHERE email = %s", (email,))
-#         user = cursor.fetchone()
-#         if user:
-#             token  = secrets.token_urlsafe(32)
-#             expiry = datetime.now() + timedelta(hours=1)
-#             cursor.execute("UPDATE users SET reset_token=%s, reset_expiry=%s WHERE id=%s", (token, expiry, user[0]))
-#             db.commit()
-#             # reset_url = url_for('reset_password', token=token, _external=True)
-#             # reset_url = os.environ.get('RENDER_EXTERNAL_URL', '') + url_for('reset_password', token=token)
-#             base_url = os.environ.get('RENDER_EXTERNAL_URL', 'https://finguard-1tp7.onrender.com')
-#             reset_url = f"{base_url}/reset-password/{token}"
-#             send_reset_email(email, user[1], reset_url)
-#         cursor.close(); db.close()
-#         flash("If that email is registered, a reset link has been sent.", "success")
-#         return redirect(url_for('login'))
-#     return render_template('forgot.html')
-
-# ── Reset Password ────────────────────────────────────────────
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
         email = request.form['email'].strip()
-        print(f"Forgot password requested for: {email}")
         db = get_db(); cursor = db.cursor()
         cursor.execute("SELECT id, username FROM users WHERE email = %s", (email,))
         user = cursor.fetchone()
-        print(f"User found: {user}")
         if user:
             token  = secrets.token_urlsafe(32)
             expiry = datetime.now() + timedelta(hours=1)
@@ -591,6 +565,34 @@ def forgot_password():
         flash("If that email is registered, a reset link has been sent.", "success")
         return redirect(url_for('login'))
     return render_template('forgot.html')
+
+# ── Reset Password ────────────────────────────────────────────
+@app.route('/reset-password/<path:token>', methods=['GET', 'POST'])
+def reset_password(token):
+    db = get_db(); cursor = db.cursor()
+    cursor.execute("SELECT id FROM users WHERE reset_token=%s AND reset_expiry > %s", (token, datetime.now()))
+    user = cursor.fetchone()
+    if not user:
+        cursor.close(); db.close()
+        flash("Reset link is invalid or has expired.", "error")
+        return redirect(url_for('forgot_password'))
+    if request.method == 'POST':
+        password         = request.form['password']
+        confirm_password = request.form['confirm_password']
+        if len(password) < 6:
+            flash("Password must be at least 6 characters.", "error")
+            return render_template('reset.html', token=token)
+        if password != confirm_password:
+            flash("Passwords do not match.", "error")
+            return render_template('reset.html', token=token)
+        new_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        cursor.execute("UPDATE users SET password_hash=%s, reset_token=NULL, reset_expiry=NULL WHERE id=%s", (new_hash, user[0]))
+        db.commit()
+        cursor.close(); db.close()
+        flash("Password reset successful! Please login.", "success")
+        return redirect(url_for('login'))
+    cursor.close(); db.close()
+    return render_template('reset.html', token=token)
 
 if __name__ == '__main__':
     app.run(debug=True)
